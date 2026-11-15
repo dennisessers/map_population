@@ -65,7 +65,7 @@ CAMERAS <- list(
 RENDER <- list(
   window    = c(1600, 1000),
   draft     = list(width = 1600, height = 900,  samples = 64),
-  final     = list(width = 7680, height = 4320, samples = 360),
+  final     = list(width = 7680, height = 4320, samples = 256),   # ~45 min, ~15 GB peak (denoised)
   max_error = 1     # mesh simplification tolerance, in inhabitants/km² (invisible at this scale)
 )
 

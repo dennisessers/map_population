@@ -61,9 +61,16 @@ if (shift_up > 0) {
 }
 
 # ---- fonts (Google Fonts, OFL) ----------------------------------------------------
-font_ok <- function(name, family) tryCatch({ font_add_google(name, family); TRUE }, error = function(e) FALSE)
-f_title <- if (font_ok("Playfair Display", "title")) "title" else "serif"
-f_body  <- if (font_ok("Inter", "body")) "body" else "sans"
+# Local copies in fonts/ first: font_add_google() once stalled for 10 minutes on a slow request.
+font_ok <- function(family, regular, bold, google) {
+  reg <- file.path(PATHS$fonts, regular); bld <- file.path(PATHS$fonts, bold)
+  if (file.exists(reg) && file.exists(bld)) {
+    font_add(family, regular = reg, bold = bld); return(TRUE)
+  }
+  tryCatch({ font_add_google(google, family); TRUE }, error = function(e) FALSE)
+}
+f_title <- if (font_ok("title", "PlayfairDisplay-Bold.ttf", "PlayfairDisplay-Bold.ttf", "Playfair Display")) "title" else "serif"
+f_body  <- if (font_ok("body", "Inter-Regular.ttf", "Inter-Bold.ttf", "Inter")) "body" else "sans"
 showtext_auto()
 dpi <- 300
 showtext_opts(dpi = dpi)

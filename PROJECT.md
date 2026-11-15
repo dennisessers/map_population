@@ -5,7 +5,23 @@ Statbel's 125 m-to-1 km population grid (1 January 2025) with R + rayshader. See
 method and how to reproduce it.
 
 ## Status
-_Work in progress, last updated 2026-11-15._
+**Done (2026-11-15).** The final map is in `output/final/`:
+
+| File | Size | In git? |
+|---|---|---|
+| `belgium_population_density.png` | 7680×4320 (8K master) | no (62 MB) |
+| `belgium_population_density_4k.png` | 3840×2160 | no |
+| `belgium_population_density_1080p.png` | 1920×1080 | yes |
+| `final_Tam_A_cap_up2.png` | raw 8K render, before annotation | no |
+
+**Final render:** Tam palette, camera A (from the south, 35°, orthographic), linear heights with a
+60k/km² cap, ×2 nearest-neighbour upsampling, 256 samples, denoised. Path tracing took 44 min
+with a 15.2 GB peak. The byline reads "Visualisation with Claude Code by @DennisEssers".
+
+**Possible next steps (not done):**
+- A zoomable web viewer (OpenSeadragon tiles of the 8K master).
+- A slow orbit video.
+- The 1 Jan 2026 sector counts, once Statbel publishes a 2026 grid.
 
 ## How we got here (chronological)
 
@@ -46,3 +62,10 @@ _Work in progress, last updated 2026-11-15._
    - Result: peak about 6.5 GB, and path tracing in seconds instead of minutes.
 6. **Palette.** Compared Tam, OKeeffe2, Hokusai2 and Greek (reversed) at identical settings
    (`output/drafts/palette_comparison.png`). You chose **Tam**.
+7. **Final.**
+   - 8K path trace: 44 min, 15.2 GB peak.
+   - Annotation: the 8K flat-field takes seconds. `font_add_google()` once stalled for 10 min, so
+     the fonts are now stored in `fonts/` (Playfair Display Bold, Inter Regular and Bold; SIL OFL)
+     and loaded locally.
+   - The map was shifted up 6% in post for balance.
+   - Byline added at your request.
