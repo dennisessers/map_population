@@ -533,7 +533,8 @@ const v3 = new THREE.Vector3();
 function updateLabels() {
   const dist = camera.position.distanceTo(controls.target);
   for (const c of cities) {
-    const wanted = state.labels && (c.rank === 1 || (c.rank === 2 && dist < 430) || (c.rank === 3 && dist < 230));
+    // secondary cities show from the start view inwards, smaller towns once zoomed in
+    const wanted = state.labels && (c.rank === 1 || (c.rank === 2 && dist < homeDist * 1.15) || (c.rank === 3 && dist < homeDist * 0.6));
     v3.copy(c.p).project(camera);
     const vis = wanted && v3.z < 1 && Math.abs(v3.x) < 1.05 && Math.abs(v3.y) < 1.05;
     if (vis !== c.shown) { c.el.style.display = vis ? '' : 'none'; c.shown = vis; }
@@ -553,6 +554,7 @@ function applySun() {
 }
 
 // ---------- camera ----------------------------------------------------------------------
+let homeDist = 400;
 function homeView() {
   const vfov = THREE.MathUtils.degToRad(camera.fov);
   const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
@@ -561,6 +563,7 @@ function homeView() {
   const needW = (MAP_W * 1.24 / 2) / Math.tan(hfov / 2);
   const needH = ((MAP_D * Math.sin(elev) + PEAK * Math.cos(elev)) * 1.38 / 2) / Math.tan(vfov / 2);
   const dist = Math.max(needW, needH);
+  homeDist = dist;
   controls.target.set(0, PEAK * 0.12, MAP_D * 0.04);
   camera.position.set(0, controls.target.y + dist * Math.sin(elev), dist * Math.cos(elev));
   camera.near = Math.max(0.2, dist / 2000); camera.updateProjectionMatrix();
