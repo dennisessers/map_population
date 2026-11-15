@@ -149,8 +149,12 @@ credits <- paste0(
   "reference date 1 January 2025 · CC BY 4.0",
   sub("^ · ", "\n", cap_note),
   "\nRendered with rayshader and rayrender in R · ETRS89-LAEA (EPSG:3035)")
-p <- p + annotate("text", x = L$cred_x, y = L$cred_y, label = credits, family = f_body,
-                  size = px2size(0.68 * u), colour = muted, hjust = 1, vjust = 0, lineheight = 1.3)
+byline <- "Visualisation with Claude Code by @DennisEssers"
+p <- p +
+  annotate("text", x = L$cred_x, y = L$cred_y + 1.7 * u, label = credits, family = f_body,
+           size = px2size(0.68 * u), colour = muted, hjust = 1, vjust = 0, lineheight = 1.3) +
+  annotate("text", x = L$cred_x, y = L$cred_y, label = byline, family = f_body,
+           fontface = "bold", size = px2size(0.78 * u), colour = ink, hjust = 1, vjust = 0)
 
 f_overlay <- file.path(tempdir(), "overlay.png")
 ggsave(f_overlay, p, width = W / dpi, height = H / dpi, dpi = dpi, bg = "transparent")
