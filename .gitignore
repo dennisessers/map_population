@@ -1,0 +1,14 @@
+# raw + processed data (re-creatable with R/01_download.R and R/02_prepare.R)
+data/
+
+# renders: drafts and full-size masters are large; only the web-size final is committed
+output/drafts/
+output/final/*
+!output/final/belgium_population_density_1080p.png
+output/qa/*.png
+
+logs/*.log
+.Rhistory
+.RData
+.Rproj.user/
+Rplots.pdf

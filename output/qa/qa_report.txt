@@ -1,0 +1,8 @@
+Raster population:            11,817,897
+Grid population (sum MS_POP): 11,817,897
+Statbel official 1 Jan 2025:  11,825,551  (grid covers 99.935%; 7,654 not placed on grid)
+Land pixels: 1,964,160 (30690.0 km2); zero-pop pixels: 21.9%
+NA pixels inside Belgium outline (holes): 160
+Pixel density quantiles (inh/km2, >0): 1%=      5  5%=      9  25%=     42  50%=    132  75%=    380  90%=  1,040  95%=  1,984  99%=  6,272  99.5%=  9,216  99.9%= 19,456  99.99%= 35,365  100%=123,520
+Top-20 municipalities: Bruxelles, Liège, Molenbeek-Saint-Jean, Uccle, Anderlecht, Evere, Koekelberg, Saint-Josse-ten-Noode, Forest, Gand, Grimbergen, Asse, Saint-Gilles
+Most populous municipalities: Antwerpen 561,141; Gent 273,742; Brussel 210,453; Charleroi 204,180; Luik 199,468; Anderlecht 129,454; Schaarbeek 121,895; Brugge 120,641; Namen 114,764; Leuven 104,353
