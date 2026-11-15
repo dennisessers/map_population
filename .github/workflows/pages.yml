@@ -1,0 +1,64 @@
+# Deploys the interactive viewer (web/) to GitHub Pages.
+# web/index.html is written for the Claude Artifact host, which adds the HTML skeleton, so this
+# workflow wraps it in a full document (doctype, viewport, social-preview tags) before publishing.
+name: Deploy viewer to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "output/final/belgium_population_density_1080p.png"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build site
+        run: |
+          set -euo pipefail
+          mkdir -p _site/data
+          cp web/data/be_cells.json _site/data/
+          cp output/final/belgium_population_density_1080p.png _site/preview.png
+          base="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}"
+          {
+            echo '<!doctype html>'
+            echo '<html lang="en">'
+            echo '<meta charset="utf-8">'
+            echo '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+            echo '<meta name="description" content="Interactive 3D map of Belgium'"'"'s population density: 117,352 Statbel grid cells (125 m to 1 km, 1 January 2025) as columns you can rotate, tilt and zoom.">'
+            echo '<meta property="og:title" content="België · Belgique · Belgien: where 11.8 million people live">'
+            echo '<meta property="og:description" content="Interactive 3D population-density map of Belgium from Statbel'"'"'s 125 m grid.">'
+            echo "<meta property=\"og:image\" content=\"${base}/preview.png\">"
+            echo "<meta property=\"og:url\" content=\"${base}/\">"
+            echo '<meta name="twitter:card" content="summary_large_image">'
+            # drop the page's own charset line (now declared above)
+            sed '1{/<meta charset/d}' web/index.html
+            echo '</html>'
+          } > _site/index.html
+          ls -la _site _site/data
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
