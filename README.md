@@ -6,6 +6,12 @@ and rendered with [rayshader](https://www.rayshader.com/) / rayrender in R.
 
 ![Belgium population density](output/final/belgium_population_density_1080p.png)
 
+**Interactive 3D version:** [Belgium Population Relief](https://claude.ai/artifact/S6bUaCYEPtcC8vsczze6wf), source in `web/`.
+- Every populated Statbel cell (117,352) is a column you can rotate, tilt and zoom.
+- Hover or tap a column to see its municipality, density and residents.
+- You can change the column height (linear or square root), the sun direction and the city labels.
+- Built with three.js. The data comes from `R/06_web_data.R` → `web/data/be_cells.json`.
+
 ## Data
 
 | What | Source | Notes |

@@ -1,0 +1,642 @@
+<meta charset="utf-8">
+<title>Belgium Population Relief</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap">
+<style>
+  /* Layout: a full-bleed WebGL relief of Belgium; quiet overlays in the four corners carry the
+     same title, legend and credits as the printed poster. A single light "paper" look on purpose,
+     matching the poster, so colours are set explicitly rather than themed. */
+  :root {
+    --paper: #F6F1E7;
+    --ink: #2B2118;
+    --muted: #6E6253;
+    --plum: #341648;
+    --ember: #DE4F33;
+    --ground: #E9E2D3;
+    --panel: rgba(246, 241, 231, 0.9);
+    --rule: rgba(43, 33, 24, 0.16);
+    --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-ui);
+    font-size: 14px; overflow: hidden; -webkit-font-smoothing: antialiased;
+  }
+  #scene { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+
+  .hud {
+    position: fixed; inset: 0; pointer-events: none;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto;
+    gap: 12px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: max(16px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-bottom, 0px));
+  }
+  .hud > * { pointer-events: auto; min-width: 0; }
+  .halo { text-shadow: 0 0 10px var(--paper), 0 0 4px var(--paper), 0 0 2px var(--paper); }
+
+  .title { grid-column: 1; grid-row: 1; align-self: start; max-width: 30rem; pointer-events: none; }
+  .title h1 {
+    margin: 0; font: 700 clamp(24px, 2.6vw, 40px)/1.06 var(--font-display); letter-spacing: 0.003em;
+    text-wrap: balance;
+  }
+  .title .rule { width: 56px; height: 3px; background: var(--plum); margin: 12px 0 10px; border-radius: 2px; }
+  .title .lede { margin: 0; font-weight: 600; font-size: 15px; }
+  .title .meta { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; max-width: 36ch; }
+
+  .side { grid-column: 2; grid-row: 1 / 3; align-self: start; display: grid; gap: 10px; justify-items: end; }
+  .panel {
+    width: 252px; box-sizing: border-box; padding: 14px 14px 12px; display: grid; gap: 10px;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 6px 24px rgba(43, 33, 24, 0.08);
+  }
+  .panel h2 { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .field { display: grid; gap: 4px; }
+  .field .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .field label, .field .lbl { font-weight: 500; font-size: 13px; }
+  output { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+  input[type="range"] { width: 100%; margin: 0; accent-color: var(--plum); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; }
+  .seg button {
+    font: 500 12px var(--font-ui); padding: 6px 4px; border: 0; background: transparent; color: var(--ink); cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background: var(--plum); color: var(--paper); }
+  .checks { display: flex; gap: 14px; flex-wrap: wrap; }
+  .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+  .check input { accent-color: var(--plum); margin: 0; }
+  .btn {
+    font: 600 13px var(--font-ui); padding: 7px 10px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--paper); color: var(--ink);
+  }
+  .btn:hover { border-color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+  .compass {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--rule); background: var(--panel);
+    display: grid; place-items: center; cursor: pointer; padding: 0;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .compass svg { width: 26px; height: 26px; transition: transform 60ms linear; }
+  .settings-toggle { display: none; }
+
+  .legend { grid-column: 1; grid-row: 3; align-self: end; display: grid; gap: 6px; max-width: 360px; }
+  .legend .lbl { font-weight: 600; font-size: 13px; }
+  .scale { display: flex; align-items: flex-start; gap: 16px; }
+  .bar-wrap { position: relative; width: min(280px, 58vw); padding-bottom: 18px; }
+  .bar { height: 10px; border-radius: 2px; }
+  .tick { position: absolute; top: 10px; transform: translateX(-50%); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .tick::before { content: ""; display: block; width: 1px; height: 4px; background: var(--ink); margin: 0 auto 1px; }
+  .zero { display: grid; justify-items: center; gap: 3px; font-size: 12px; }
+  .zero span:first-child { width: 18px; height: 10px; background: var(--ground); border: 1px solid var(--muted); border-radius: 2px; box-sizing: border-box; }
+  .legend .note { color: var(--muted); font-size: 12px; line-height: 1.4; max-width: 46ch; margin: 0; }
+
+  .credits { grid-column: 2; grid-row: 3; align-self: end; text-align: right; font-size: 11.5px; line-height: 1.5; color: var(--muted); max-width: 30rem; }
+  .credits p { margin: 0; }
+  .credits a { color: inherit; }
+  .credits .byline { color: var(--ink); font-weight: 600; font-size: 13px; margin-top: 6px; }
+
+  .hint {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 4px);
+    padding: 6px 12px; border-radius: 999px; background: var(--ink); color: var(--paper);
+    font-size: 12px; pointer-events: none; transition: opacity 600ms ease; white-space: nowrap;
+  }
+  .hint.gone { opacity: 0; }
+
+  .city {
+    position: fixed; left: 0; top: 0; pointer-events: none; will-change: transform;
+    font: 600 12px var(--font-ui); color: var(--ink); white-space: nowrap;
+  }
+  .city span {
+    display: block; padding: 2px 7px; border-radius: 4px; background: rgba(246, 241, 231, 0.86);
+    border: 1px solid var(--rule); transform: translate(-50%, calc(-100% - 9px));
+  }
+  .city::after {
+    content: ""; position: absolute; left: 0; top: -9px; width: 1px; height: 9px; background: var(--ink);
+  }
+  .city.r1 span { font-size: 13px; font-weight: 700; }
+
+  .tip {
+    position: fixed; left: 0; top: 0; pointer-events: none; z-index: 5;
+    padding: 9px 11px; border-radius: 8px; background: var(--ink); color: var(--paper);
+    font-size: 12.5px; line-height: 1.45; max-width: 260px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+  .tip strong { display: block; font-size: 13.5px; margin-bottom: 2px; }
+  .tip .big { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tip .dim { color: #CFC4B4; }
+
+  .status {
+    position: fixed; inset: 0; display: grid; place-items: center; text-align: center;
+    font-size: 14px; color: var(--muted); pointer-events: none;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .status strong { display: block; font: 700 22px var(--font-display); color: var(--ink); margin-bottom: 6px; }
+
+  @media (max-width: 760px) {
+    .hud { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    .title h1 { font-size: 22px; }
+    .title .rule { margin: 8px 0 6px; }
+    .title .lede { font-size: 13.5px; }
+    .title .meta { display: none; }
+    .settings-toggle { display: grid; }
+    .panel { width: min(252px, calc(100vw - 32px)); }
+    .panel.collapsed { display: none; }
+    .legend { grid-column: 1 / -1; grid-row: 3; }
+    .credits { grid-column: 1 / -1; grid-row: 4; text-align: left; font-size: 10.5px; }
+    .credits .byline { font-size: 12px; margin-top: 2px; }
+    .hud { grid-template-rows: auto 1fr auto auto; }
+    .legend .note { display: none; }
+    .hint { bottom: auto; top: calc(max(16px, env(safe-area-inset-top, 0px)) + 96px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hint, .compass svg { transition: none; }
+  }
+</style>
+
+<canvas id="scene" tabindex="0" aria-label="Interactive 3D map of Belgium's population density. Drag to rotate and tilt, scroll or pinch to zoom."></canvas>
+
+<div class="hud">
+  <header class="title halo">
+    <h1>België · Belgique · Belgien</h1>
+    <div class="rule" aria-hidden="true"></div>
+    <p class="lede">Where 11.8 million people live</p>
+    <p class="meta">Population density on 1 January 2025, at up to 125 m resolution. Every column is one Statbel grid cell.</p>
+  </header>
+
+  <aside class="side">
+    <div style="display:flex; gap:8px;">
+      <button class="compass settings-toggle" id="settingsToggle" aria-label="Show map settings" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="#2B2118" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <button class="compass" id="compass" aria-label="Turn north up" title="Turn north up">
+        <svg viewBox="0 0 24 24" id="needle" aria-hidden="true">
+          <path d="M12 2.5 L15.5 12 L12 10.6 L8.5 12 Z" fill="#DE4F33"/>
+          <path d="M12 21.5 L8.5 12 L12 13.4 L15.5 12 Z" fill="#6E6253"/>
+        </svg>
+      </button>
+    </div>
+    <section class="panel collapsed" id="panel" aria-label="Map settings">
+      <h2>Map settings</h2>
+      <div class="field">
+        <div class="row"><label for="ex">Column height</label><output id="exOut" for="ex">×1.0</output></div>
+        <input type="range" id="ex" min="0.25" max="4" step="0.05" value="1">
+      </div>
+      <div class="field">
+        <span class="lbl" id="scaleLbl">Height scale</span>
+        <div class="seg" role="group" aria-labelledby="scaleLbl">
+          <button type="button" id="scaleLin" aria-pressed="true">Linear</button>
+          <button type="button" id="scaleSqrt" aria-pressed="false">Square root</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="row"><label for="sun">Sun direction</label><output id="sunOut" for="sun">WSW</output></div>
+        <input type="range" id="sun" min="0" max="359" step="1" value="240">
+      </div>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="labels" checked> City labels</label>
+        <label class="check"><input type="checkbox" id="shadows" checked> Shadows</label>
+      </div>
+      <button type="button" class="btn" id="reset">Reset view</button>
+    </section>
+  </aside>
+
+  <div class="legend halo">
+    <span class="lbl">Inhabitants per km²</span>
+    <div class="scale">
+      <div class="bar-wrap">
+        <div class="bar" id="bar"></div>
+        <span class="tick" data-v="100">100</span>
+        <span class="tick" data-v="1000">1,000</span>
+        <span class="tick" data-v="10000">10,000</span>
+      </div>
+      <div class="zero"><span></span><span>0</span></div>
+    </div>
+    <p class="note">Colour on a log scale. Column height is linear, so each column's volume is proportional to the people living in it.</p>
+  </div>
+
+  <footer class="credits halo">
+    <p>Data: <a href="https://statbel.fgov.be/en/open-data/datalab-population-grid-cells-varying-size-2025" target="_blank" rel="noopener">Statbel</a>, population grid with cells of varying size (125 m to 1 km), 1 January 2025 · CC BY 4.0</p>
+    <p>Heights capped at 60,000 inh./km² (8 of 117,352 cells) · ETRS89-LAEA</p>
+    <p class="byline">Visualisation with Claude Code by @DennisEssers</p>
+  </footer>
+</div>
+
+<div class="hint" id="hint">Drag to rotate and tilt · right-drag to pan · scroll to zoom</div>
+<div class="tip" id="tip" hidden></div>
+<div id="labelsLayer"></div>
+<div class="status" id="status"><div><strong>Building Belgium</strong>Loading 117,352 grid cells…</div></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = (id) => document.getElementById(id);
+const status = $('status');
+const fail = (msg) => { status.innerHTML = '<div><strong>The map could not load</strong>' + msg + '</div>'; };
+
+// ---------- data ---------------------------------------------------------------------------
+let D;
+try {
+  const res = await fetch('data/be_cells.json');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  D = await res.json();
+} catch (e) {
+  fail('The cell data (data/be_cells.json) did not arrive. Reload the page to try again.');
+  throw e;
+}
+const buf = (s) => { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
+const X0 = new Uint16Array(buf(D.cells.x0)), Y0 = new Uint16Array(buf(D.cells.y0));
+const CW = new Uint16Array(buf(D.cells.w)),  CH = new Uint16Array(buf(D.cells.h));
+const POP = new Uint16Array(buf(D.cells.pop)), MUNI = new Uint16Array(buf(D.cells.muni));
+const DENS = new Float32Array(buf(D.cells.dens));
+const N = D.n, KM = D.unit_m / 1000;              // data unit -> km
+const CAP = D.height_cap, [L0, L1] = D.colour_lims.map(Math.log10);
+
+// map extent from the outline; world: x east (km), z south (km), y up (km), centred on Belgium
+let minU = [Infinity, Infinity], maxU = [-Infinity, -Infinity];
+for (const poly of D.outline) for (const ring of poly) for (let i = 0; i < ring.length; i += 2) {
+  minU[0] = Math.min(minU[0], ring[i]); maxU[0] = Math.max(maxU[0], ring[i]);
+  minU[1] = Math.min(minU[1], ring[i + 1]); maxU[1] = Math.max(maxU[1], ring[i + 1]);
+}
+const CX = (minU[0] + maxU[0]) / 2 * KM, CY = (minU[1] + maxU[1]) / 2 * KM;
+const MAP_W = (maxU[0] - minU[0]) * KM, MAP_D = (maxU[1] - minU[1]) * KM;
+const wx = (u) => u * KM - CX;      // data x -> world x
+const wz = (u) => -(u * KM - CY);   // data y -> world z (north = -z)
+
+// ---------- renderer / scene -------------------------------------------------------------
+const canvas = $('scene');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  fail('This browser could not start WebGL, which the 3D map needs.');
+  throw e;
+}
+const small = Math.min(innerWidth, innerHeight) < 700;
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const PAPER = new THREE.Color('#F6F1E7');
+const scene = new THREE.Scene();
+scene.background = PAPER;
+
+const camera = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.3, 4000);
+const controls = new OrbitControls(camera, canvas);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+controls.enableDamping = !reduceMotion;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = false;
+controls.zoomToCursor = true;
+controls.minDistance = 3;
+controls.maxDistance = 1400;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(86);
+
+// physically based light units: a white top face under sky + sun comes out at about 1.0
+const hemi = new THREE.HemisphereLight('#ffffff', '#d9ccb6', 1.9);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff1dd', 3.0);
+sun.castShadow = true;
+sun.shadow.mapSize.set(small ? 2048 : 4096, small ? 2048 : 4096);
+const sc = sun.shadow.camera;
+sc.left = -190; sc.right = 190; sc.top = 190; sc.bottom = -190; sc.near = 100; sc.far = 1100;
+sun.shadow.bias = -0.00004;   // depth units over ~1000 km: about 40 m
+sun.shadow.normalBias = 0.03; // km
+scene.add(sun, sun.target);
+
+// ---------- Belgium plinth ---------------------------------------------------------------
+const PLINTH = 1.1;   // km
+const shapes = D.outline.map((poly) => {
+  const toV = (ring) => { const pts = []; for (let i = 0; i < ring.length; i += 2) pts.push(new THREE.Vector2(ring[i] * KM - CX, ring[i + 1] * KM - CY)); return pts; };
+  const shape = new THREE.Shape(toV(poly[0]));
+  for (let k = 1; k < poly.length; k++) shape.holes.push(new THREE.Path(toV(poly[k])));
+  return shape;
+});
+const plinthGeo = new THREE.ExtrudeGeometry(shapes, { depth: PLINTH, bevelEnabled: false, curveSegments: 1 });
+plinthGeo.rotateX(-Math.PI / 2);          // shape y (north) -> -z ; extrusion -> +y
+plinthGeo.translate(0, -PLINTH, 0);       // top face at y = 0
+const plinth = new THREE.Mesh(plinthGeo, [
+  new THREE.MeshStandardMaterial({ color: '#E9E2D3', roughness: 1, metalness: 0 }),
+  new THREE.MeshStandardMaterial({ color: '#341648', roughness: 0.9, metalness: 0 }),
+]);
+plinth.receiveShadow = true;
+plinth.castShadow = true;
+scene.add(plinth);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), new THREE.ShadowMaterial({ color: '#3b2a1a', opacity: 0.2 }));
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -PLINTH - 0.02;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ---------- columns: one instanced box per Statbel cell ------------------------------------
+const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+boxGeo.translate(0, 0.5, 0);
+const colMat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0 });
+const cols = new THREE.InstancedMesh(boxGeo, colMat, N);
+cols.castShadow = true;
+cols.receiveShadow = true;
+cols.frustumCulled = false;
+
+const bx0 = new Float32Array(N), bx1 = new Float32Array(N), bz0 = new Float32Array(N), bz1 = new Float32Array(N);
+const dDisp = new Float32Array(N), hgt = new Float32Array(N);
+const palette = D.palette.map((h) => new THREE.Color(h));
+const tmpC = new THREE.Color();
+const M = cols.instanceMatrix.array;
+for (let i = 0; i < N; i++) {
+  const x0 = wx(X0[i]), x1 = wx(X0[i] + CW[i]);
+  const z0 = wz(Y0[i] + CH[i]), z1 = wz(Y0[i]);          // north edge has the smaller z
+  bx0[i] = x0; bx1[i] = x1; bz0[i] = z0; bz1[i] = z1;
+  dDisp[i] = POP[i] / ((CW[i] * KM) * (CH[i] * KM));       // per km² of the drawn rectangle
+  const o = i * 16;
+  M[o] = x1 - x0; M[o + 10] = z1 - z0; M[o + 15] = 1;
+  M[o + 12] = (x0 + x1) / 2; M[o + 14] = (z0 + z1) / 2;
+  const t = Math.min(1, Math.max(0, (Math.log10(Math.max(DENS[i], 1e-6)) - L0) / (L1 - L0)));
+  cols.setColorAt(i, palette[Math.round(t * (palette.length - 1))]);
+}
+scene.add(cols);
+
+const state = { ex: 1, scale: 'linear', sunAz: 240, sunAlt: 28, labels: true, shadows: true };
+const PEAK = 0.14 * MAP_W;    // tallest (capped) column = 14% of the map's width, as on the poster
+let maxH = 0;
+function heightOf(d) {
+  const r = Math.min(d, CAP) / CAP;
+  return Math.max(0.004, (state.scale === 'linear' ? r : Math.sqrt(r) * 0.45) * PEAK * state.ex);
+}
+function applyHeights() {
+  maxH = 0;
+  for (let i = 0; i < N; i++) { const h = heightOf(dDisp[i]); hgt[i] = h; M[i * 16 + 5] = h; if (h > maxH) maxH = h; }
+  cols.instanceMatrix.needsUpdate = true;
+  placeCityAnchors();
+  if (hoverI >= 0) showOutline(hoverI);
+  invalidate();
+}
+
+// ---------- spatial bins for fast picking --------------------------------------------------
+const BIN = 1;   // km
+const gx0 = wx(minU[0]) - 1, gz0 = wz(maxU[1]) - 1;
+const NBX = Math.ceil(MAP_W / BIN) + 3, NBZ = Math.ceil(MAP_D / BIN) + 3;
+const binCount = new Int32Array(NBX * NBZ + 1);
+const clampX = (v) => Math.min(NBX - 1, Math.max(0, v)), clampZ = (v) => Math.min(NBZ - 1, Math.max(0, v));
+const binRange = (i) => [
+  clampX(Math.floor((bx0[i] - gx0) / BIN)), clampX(Math.floor((bx1[i] - gx0 - 1e-6) / BIN)),
+  clampZ(Math.floor((bz0[i] - gz0) / BIN)), clampZ(Math.floor((bz1[i] - gz0 - 1e-6) / BIN))];
+for (let i = 0; i < N; i++) { const [a, b, c, d] = binRange(i); for (let z = c; z <= d; z++) for (let x = a; x <= b; x++) binCount[z * NBX + x + 1]++; }
+for (let k = 1; k < binCount.length; k++) binCount[k] += binCount[k - 1];
+const binItems = new Int32Array(binCount[binCount.length - 1]);
+const fillPos = binCount.slice(0, -1);
+for (let i = 0; i < N; i++) { const [a, b, c, d] = binRange(i); for (let z = c; z <= d; z++) for (let x = a; x <= b; x++) binItems[fillPos[z * NBX + x]++] = i; }
+
+function rayBox(o, d, i) {
+  let tmin = 0, tmax = Infinity;
+  const lo = [bx0[i], 0, bz0[i]], hi = [bx1[i], hgt[i], bz1[i]];
+  for (let a = 0; a < 3; a++) {
+    if (Math.abs(d[a]) < 1e-12) { if (o[a] < lo[a] || o[a] > hi[a]) return Infinity; continue; }
+    let t1 = (lo[a] - o[a]) / d[a], t2 = (hi[a] - o[a]) / d[a];
+    if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+    if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2;
+    if (tmin > tmax) return Infinity;
+  }
+  return tmin;
+}
+function pick(ray) {
+  const o = [ray.origin.x, ray.origin.y, ray.origin.z], d = [ray.direction.x, ray.direction.y, ray.direction.z];
+  // clip the ray to the columns' bounding volume
+  let t0 = 0, t1 = Infinity;
+  const lo = [gx0, 0, gz0], hi = [gx0 + NBX * BIN, maxH, gz0 + NBZ * BIN];
+  for (let a = 0; a < 3; a++) {
+    if (Math.abs(d[a]) < 1e-12) { if (o[a] < lo[a] || o[a] > hi[a]) return -1; continue; }
+    let s1 = (lo[a] - o[a]) / d[a], s2 = (hi[a] - o[a]) / d[a];
+    if (s1 > s2) { const s = s1; s1 = s2; s2 = s; }
+    t0 = Math.max(t0, s1); t1 = Math.min(t1, s2);
+  }
+  if (t0 > t1) return -1;
+  // walk the 2D bins the ray crosses, nearest first
+  const px = o[0] + d[0] * t0, pz = o[2] + d[2] * t0;
+  let ix = Math.min(NBX - 1, Math.max(0, Math.floor((px - gx0) / BIN)));
+  let iz = Math.min(NBZ - 1, Math.max(0, Math.floor((pz - gz0) / BIN)));
+  const sx = d[0] > 0 ? 1 : -1, sz = d[2] > 0 ? 1 : -1;
+  const dtx = Math.abs(d[0]) < 1e-12 ? Infinity : BIN / Math.abs(d[0]);
+  const dtz = Math.abs(d[2]) < 1e-12 ? Infinity : BIN / Math.abs(d[2]);
+  let tx = Math.abs(d[0]) < 1e-12 ? Infinity : t0 + ((gx0 + (ix + (sx > 0 ? 1 : 0)) * BIN) - px) / d[0];
+  let tz = Math.abs(d[2]) < 1e-12 ? Infinity : t0 + ((gz0 + (iz + (sz > 0 ? 1 : 0)) * BIN) - pz) / d[2];
+  let best = Infinity, bestI = -1;
+  for (let steps = 0; steps < 4000; steps++) {
+    const b = iz * NBX + ix;
+    for (let k = binCount[b]; k < binCount[b + 1]; k++) { const i = binItems[k]; const t = rayBox(o, d, i); if (t < best) { best = t; bestI = i; } }
+    const tExit = Math.min(tx, tz);
+    if (best <= tExit || tExit > t1) break;
+    if (tx < tz) { ix += sx; tx += dtx; } else { iz += sz; tz += dtz; }
+    if (ix < 0 || iz < 0 || ix >= NBX || iz >= NBZ) break;
+  }
+  return bestI;
+}
+
+// ---------- hover outline + tooltip -----------------------------------------------------
+const edge = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), new THREE.LineBasicMaterial({ color: '#2B2118' }));
+edge.visible = false;
+scene.add(edge);
+let hoverI = -1;
+function showOutline(i) {
+  edge.position.set((bx0[i] + bx1[i]) / 2, 0, (bz0[i] + bz1[i]) / 2);
+  edge.scale.set(bx1[i] - bx0[i], hgt[i], bz1[i] - bz0[i]);
+  edge.visible = true;
+}
+const fmt = new Intl.NumberFormat('en-GB');
+const tip = $('tip');
+function sizeLabel(i) {
+  const w = CW[i] * D.unit_m, h = CH[i] * D.unit_m;
+  const area = POP[i] / DENS[i], rect = (w / 1000) * (h / 1000);
+  if (w === h && Math.abs(area - rect) / rect < 0.01) return (w >= 1000 ? '1 km' : w + ' m') + ' cell';
+  return 'cell clipped by the border';
+}
+function showTip(i, cx, cy) {
+  const dens = DENS[i] >= 100 ? Math.round(DENS[i] / 10) * 10 : Math.round(DENS[i]);
+  tip.innerHTML = '<strong></strong><span class="big"></span> inhabitants per km²<br><span class="dim"></span>';
+  tip.querySelector('strong').textContent = D.munis[MUNI[i]];
+  tip.querySelector('.big').textContent = fmt.format(dens);
+  tip.querySelector('.dim').textContent = fmt.format(POP[i]) + (POP[i] === 1 ? ' resident' : ' residents') + ' · ' + sizeLabel(i);
+  tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let x = cx + 14, y = cy + 14;
+  if (x + r.width > innerWidth - 8) x = cx - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = cy - r.height - 14;
+  tip.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, y)}px)`;
+}
+function hideHover() { if (hoverI >= 0 || !tip.hidden) { hoverI = -1; edge.visible = false; tip.hidden = true; invalidate(); } }
+
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let pendingPick = null, dragging = false;
+function doPick() {
+  if (!pendingPick) return;
+  const { x, y } = pendingPick; pendingPick = null;
+  ndc.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const i = pick(ray.ray);
+  if (i < 0) { hideHover(); return; }
+  if (i !== hoverI) { hoverI = i; showOutline(i); invalidate(); }
+  showTip(i, x, y);
+}
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse' || dragging) return;
+  pendingPick = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('pointerleave', hideHover);
+let downAt = null;
+canvas.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!downAt) return;
+  const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+  if (e.pointerType !== 'mouse' && moved < 6 && performance.now() - downAt.t < 400) pendingPick = { x: e.clientX, y: e.clientY };
+  downAt = null;
+});
+controls.addEventListener('start', () => { dragging = true; hideHint(); tip.hidden = true; });
+controls.addEventListener('end', () => { dragging = false; });
+
+// ---------- city labels ---------------------------------------------------------------
+const layer = $('labelsLayer');
+const cities = D.cities.map((c) => {
+  const el = document.createElement('div');
+  el.className = 'city r' + c.rank;
+  const s = document.createElement('span'); s.textContent = c.name; el.appendChild(s);
+  layer.appendChild(el);
+  return { ...c, el, p: new THREE.Vector3(wx(c.x), 0, wz(c.y)), shown: true };
+});
+function placeCityAnchors() {
+  for (const c of cities) {
+    let top = 0;
+    const r = 1.2, ix0 = Math.floor((c.p.x - r - gx0) / BIN), ix1 = Math.floor((c.p.x + r - gx0) / BIN);
+    const iz0 = Math.floor((c.p.z - r - gz0) / BIN), iz1 = Math.floor((c.p.z + r - gz0) / BIN);
+    for (let z = iz0; z <= iz1; z++) for (let x = ix0; x <= ix1; x++) {
+      if (x < 0 || z < 0 || x >= NBX || z >= NBZ) continue;
+      const b = z * NBX + x;
+      for (let k = binCount[b]; k < binCount[b + 1]; k++) top = Math.max(top, hgt[binItems[k]]);
+    }
+    c.p.y = top + 0.6;
+  }
+}
+const v3 = new THREE.Vector3();
+function updateLabels() {
+  const dist = camera.position.distanceTo(controls.target);
+  for (const c of cities) {
+    const wanted = state.labels && (c.rank === 1 || (c.rank === 2 && dist < 430) || (c.rank === 3 && dist < 230));
+    v3.copy(c.p).project(camera);
+    const vis = wanted && v3.z < 1 && Math.abs(v3.x) < 1.05 && Math.abs(v3.y) < 1.05;
+    if (vis !== c.shown) { c.el.style.display = vis ? '' : 'none'; c.shown = vis; }
+    if (vis) c.el.style.transform = `translate(${((v3.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - v3.y) / 2 * innerHeight).toFixed(1)}px)`;
+  }
+}
+
+// ---------- sun ---------------------------------------------------------------------------
+const compassNames = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+function applySun() {
+  const az = THREE.MathUtils.degToRad(state.sunAz), alt = THREE.MathUtils.degToRad(state.sunAlt);
+  const dir = new THREE.Vector3(Math.sin(az) * Math.cos(alt), Math.sin(alt), -Math.cos(az) * Math.cos(alt));
+  sun.position.copy(dir.multiplyScalar(600));
+  sun.target.position.set(0, 0, 0);
+  $('sunOut').value = compassNames[Math.round(state.sunAz / 22.5) % 16];
+  invalidate();
+}
+
+// ---------- camera ----------------------------------------------------------------------
+function homeView() {
+  const vfov = THREE.MathUtils.degToRad(camera.fov);
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
+  const elev = THREE.MathUtils.degToRad(35);
+  // leave room for the title (top left), settings (top right), legend and credits (bottom)
+  const needW = (MAP_W * 1.24 / 2) / Math.tan(hfov / 2);
+  const needH = ((MAP_D * Math.sin(elev) + PEAK * Math.cos(elev)) * 1.38 / 2) / Math.tan(vfov / 2);
+  const dist = Math.max(needW, needH);
+  controls.target.set(0, PEAK * 0.12, MAP_D * 0.04);
+  camera.position.set(0, controls.target.y + dist * Math.sin(elev), dist * Math.cos(elev));
+  camera.near = Math.max(0.2, dist / 2000); camera.updateProjectionMatrix();
+  controls.update();
+  invalidate();
+}
+
+// ---------- render loop (on demand) -----------------------------------------------------
+let needs = true;
+function invalidate() { needs = true; }
+controls.addEventListener('change', invalidate);
+const needle = $('needle');
+function frame() {
+  controls.update();
+  if (pendingPick) doPick();
+  if (needs) {
+    needs = false;
+    renderer.render(scene, camera);
+    updateLabels();
+    needle.style.transform = `rotate(${THREE.MathUtils.radToDeg(controls.getAzimuthalAngle())}deg)`;
+  }
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight, false); invalidate();
+});
+
+// ---------- UI ----------------------------------------------------------------------------
+let heightQueued = false;
+const queueHeights = () => { if (!heightQueued) { heightQueued = true; requestAnimationFrame(() => { heightQueued = false; applyHeights(); }); } };
+$('ex').addEventListener('input', (e) => { state.ex = +e.target.value; $('exOut').value = '×' + state.ex.toFixed(state.ex < 1 ? 2 : 1); queueHeights(); });
+const setScale = (s) => { state.scale = s; $('scaleLin').setAttribute('aria-pressed', s === 'linear'); $('scaleSqrt').setAttribute('aria-pressed', s === 'sqrt'); queueHeights(); };
+$('scaleLin').addEventListener('click', () => setScale('linear'));
+$('scaleSqrt').addEventListener('click', () => setScale('sqrt'));
+$('sun').addEventListener('input', (e) => { state.sunAz = +e.target.value; applySun(); });
+$('labels').addEventListener('change', (e) => { state.labels = e.target.checked; invalidate(); });
+$('shadows').addEventListener('change', (e) => {
+  state.shadows = e.target.checked; sun.castShadow = state.shadows;
+  colMat.needsUpdate = true; plinth.material.forEach((m) => (m.needsUpdate = true)); invalidate();
+});
+$('reset').addEventListener('click', homeView);
+$('compass').addEventListener('click', () => {
+  // keep tilt and distance, turn the view so north is up
+  const off = camera.position.clone().sub(controls.target);
+  const r = Math.hypot(off.x, off.z);
+  camera.position.set(controls.target.x, camera.position.y, controls.target.z + r);
+  controls.update(); invalidate();
+});
+const panel = $('panel'), toggle = $('settingsToggle');
+const narrow = matchMedia('(max-width: 760px)');
+const syncPanel = () => { panel.classList.toggle('collapsed', narrow.matches); toggle.setAttribute('aria-expanded', String(!narrow.matches)); };
+syncPanel();
+narrow.addEventListener('change', syncPanel);
+toggle.addEventListener('click', () => {
+  const open = panel.classList.toggle('collapsed') === false;
+  toggle.setAttribute('aria-expanded', String(open));
+});
+
+// legend gradient and tick positions from the exact palette and limits
+const stops = [];
+for (let k = 0; k <= 12; k++) stops.push(D.palette[Math.round(k / 12 * (D.palette.length - 1))] + ' ' + (k / 12 * 100).toFixed(1) + '%');
+$('bar').style.background = 'linear-gradient(90deg, ' + stops.join(', ') + ')';
+document.querySelectorAll('.tick').forEach((t) => { t.style.left = ((Math.log10(+t.dataset.v) - L0) / (L1 - L0) * 100).toFixed(2) + '%'; });
+
+// hint: touch wording, fade after first interaction
+const hint = $('hint');
+if (matchMedia('(pointer: coarse)').matches) hint.textContent = 'One finger rotates · two fingers zoom, pan and tilt · tap a column';
+function hideHint() { hint.classList.add('gone'); }
+setTimeout(hideHint, 9000);
+
+// ---------- go ----------------------------------------------------------------------------
+applyHeights();
+applySun();
+homeView();
+status.remove();
+requestAnimationFrame(frame);
+</script>

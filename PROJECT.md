@@ -18,9 +18,22 @@ method and how to reproduce it.
 60k/km² cap, ×2 nearest-neighbour upsampling, 256 samples, denoised. Path tracing took 44 min
 with a 15.2 GB peak. The byline reads "Visualisation with Claude Code by @DennisEssers".
 
+**Interactive 3D web version (2026-11-15):** https://claude.ai/artifact/S6bUaCYEPtcC8vsczze6wf
+(a private Claude Artifact; share it from the page's Share menu).
+- **Source:** `web/index.html` plus `web/data/be_cells.json` (2.6 MB), exported by `R/06_web_data.R`.
+- **Rendering:** three.js 0.170 (jsDelivr importmap). Each populated cell (117,352) is one instance
+  of a single `InstancedMesh` box. Clipped border cells use the bounding box of the clipped shape,
+  and height = pop / rectangle area, so volume ∝ residents.
+- **Scene:** the Belgium outline is extruded as a plinth. Sun shadows come from a 4096 shadow map
+  (2048 on small screens).
+- **Picking:** hover/tap uses a custom 1 km bin grid with a ray DDA instead of three.js
+  raycasting, which would test all 117k instances.
+- **Units:** coordinates are stored in 12.5 m units, so every 125 m cell edge is an exact integer.
+  10 m units rounded 12.5 and left hairline gaps.
+
 **Possible next steps (not done):**
-- A zoomable web viewer (OpenSeadragon tiles of the 8K master).
 - A slow orbit video.
+- Host the web version on GitHub Pages, as for KORILIO.
 - The 1 Jan 2026 sector counts, once Statbel publishes a 2026 grid.
 
 ## How we got here (chronological)
