@@ -1,5 +1,5 @@
 # raw + processed data (re-creatable with R/01_download.R and R/02_prepare.R)
-data/
+/data/
 
 # renders: drafts and full-size masters are large; only the web-size final is committed
 output/drafts/
